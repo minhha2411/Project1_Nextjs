@@ -1,11 +1,18 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 
 import { Button, Col, Input, Row } from "antd";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
+import axiosInstance from "../api/axiosConfig";
+import { useRouter } from "next/navigation";
 
 function Login() {
+  const router = useRouter();
+  const [loginInfo, setLoginInfo] = useState({
+    email: "",
+    password: "",
+  });
   const LoginSchema = Yup.object().shape({
     email: Yup.string().email("Invalid Email").required("Required"),
 
@@ -18,6 +25,24 @@ function Login() {
       .required("Required"),
   });
 
+  const handleSubmit = async (email: string, password: string) => {
+    try {
+      const result = await axiosInstance.post("/auth/login", {
+        email,
+        password,
+      });
+      console.log(result, "result");
+      if (result.status == 201) {
+        localStorage.setItem("accessToken", result?.data?.access_token);
+        localStorage.setItem("refreshToken", result?.data?.user?.refreshToken);
+
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      console.log(error, "error");
+    }
+  };
+
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <div className="w-[500] h-[500] flex flex-col justify-center items-center">
@@ -25,8 +50,9 @@ function Login() {
         <Formik
           initialValues={{ email: "", password: "" }}
           validationSchema={LoginSchema}
-          onSubmit={(values) => {
+          onSubmit={async (values) => {
             console.log("Form values:", values);
+            await handleSubmit(values.email, values.password);
           }}
         >
           {({ handleSubmit, handleChange, values, errors, touched }) => {
